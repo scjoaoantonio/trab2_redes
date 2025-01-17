@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
     while (1)
     {
-        printf("Servidor esperando uma nova conexão...\n");
+        printf("Servidor esperando uma nova conexao...\n");
 
         newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
         if (newsockfd == INVALID_SOCKET)
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
             error("Erro no accept");
         }
 
-        printf("Conexão estabelecida com um cliente!\n");
+        printf("Conexao estabelecida com um cliente!\n");
 
         while (attemptsLeft > 0 && !checkWin(revealed, wordLength))
         {
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
             n = recv(newsockfd, buffer, sizeof(buffer) - 1, 0);
             if (n <= 0)
             {
-                printf("Conexão encerrada pelo cliente.\n");
+                printf("Conexao encerrada pelo cliente.\n");
                 break;
             }
 
@@ -127,11 +127,11 @@ int main(int argc, char *argv[])
 
             if (checkWin(revealed, wordLength))
             {
-                strcat(buffer, " Parabéns! Você ganhou!");
+                strcat(buffer, " GANHOU! ");
             }
             else if (attemptsLeft == 0)
             {
-                snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), " Você perdeu! Resposta: %s", word);
+                snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), " PERDEU! Resposta: %s", word);
             }
             else
             {
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
         }
 
         closesocket(newsockfd);
-        printf("Conexão encerrada. Reiniciando o jogo.\n");
+        printf("Conexao encerrada. Reiniciando o jogo.\n");
         memset(revealed, 0, sizeof(revealed));
         attemptsLeft = 6;
     }
