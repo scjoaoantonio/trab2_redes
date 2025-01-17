@@ -1,0 +1,14 @@
+# servidor_iterativo
+
+gcc -o servidor_iterativo servidor_iterativo.c -lws2_32
+./servidor_iterativo 8080
+
+# servidor_fork
+
+gcc -o servidor_fork servidor_fork.c -lws2_32 -lpthread
+./servidor_fork 8080     
+
+# servidor_thread
+
+gcc -o servidor_thread servidor_thread.c -lws2_32 -lpthread
+./servidor_thread 8080
