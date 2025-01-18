@@ -1,3 +1,11 @@
+/*
+servidor_fork
+
+gcc -o servidor_fork servidor_fork.c -lws2_32 -lpthread
+./servidor_fork 8080
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,12 +14,14 @@
 #include <ctype.h>
 #include <pthread.h>
 
-void error(const char *msg)
+// Exibir uma mensagem de erro e sair
+void mensagemDeErro(const char *msg)
 {
     fprintf(stderr, "%s: %d\n", msg, WSAGetLastError());
     exit(1);
 }
 
+// gerar a palavra oculta
 void generateHiddenWord(const char *word, const int *revealed, char *hiddenWord)
 {
     size_t length = strlen(word);
@@ -22,7 +32,8 @@ void generateHiddenWord(const char *word, const int *revealed, char *hiddenWord)
     hiddenWord[length] = '\0';
 }
 
-int checkWin(const int *revealed, size_t length)
+// checar vitória do usuário
+int checkVitoria(const int *revealed, size_t length)
 {
     for (size_t i = 0; i < length; ++i)
     {
@@ -34,12 +45,13 @@ int checkWin(const int *revealed, size_t length)
     return 1;
 }
 
+// ====== JOGO DA FORCA =========
 void *handle_client(void *arg)
 {
     int newsockfd = *(int *)arg;
     free(arg);
 
-    const char word[] = "forca";
+    const char word[] = "redes";
     size_t wordLength = strlen(word);
     int revealed[64] = {0};
     int attemptsLeft = 6;
@@ -104,6 +116,7 @@ void *handle_client(void *arg)
 
 int main(int argc, char *argv[])
 {
+    // Inicializar Winsock
     WSADATA wsaData;
     int sockfd, newsockfd, portno;
     struct sockaddr_in serv_addr, cli_addr;
@@ -116,11 +129,11 @@ int main(int argc, char *argv[])
     }
 
     if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
-        error("Falha ao inicializar Winsock");
+        mensagemDeErro("Falha ao iniciar Winsock");
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == INVALID_SOCKET)
-        error("Erro ao abrir o socket");
+        mensagemDeErro("Erro ao abrir o socket");
 
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
     portno = atoi(argv[1]);
@@ -129,7 +142,7 @@ int main(int argc, char *argv[])
     serv_addr.sin_port = htons(portno);
 
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR)
-        error("Erro no binding");
+        mensagemDeErro("Erro no binding");
 
     listen(sockfd, 5);
     clilen = sizeof(cli_addr);
@@ -138,7 +151,7 @@ int main(int argc, char *argv[])
 
     while (1)
     {
-        printf("Aguardando conexao...\n");
+        printf("Aguardando conexao\n");
         newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
         if (newsockfd == INVALID_SOCKET)
         {
@@ -146,7 +159,7 @@ int main(int argc, char *argv[])
             continue;
         }
 
-        printf("Conexão estabelecida com um cliente!\n");
+        printf("Conexão estabelecida\n");
 
         int *arg = malloc(sizeof(int));
         *arg = newsockfd;
@@ -161,6 +174,7 @@ int main(int argc, char *argv[])
         pthread_detach(thread);
     }
 
+    // Encerrar o servidor
     closesocket(sockfd);
     WSACleanup();
     printf("Servidor encerrado.\n");
