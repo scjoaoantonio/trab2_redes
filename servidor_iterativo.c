@@ -1,17 +1,28 @@
-#define WIN32_LEAN_AND_MEAN
+/*
+servidor_iterativo
+
+ gcc -o servidor_iterativo servidor_iterativo.c -lws2_32
+./servidor_iterativo 8080
+
+*/
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <winsock2.h>
 #include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <ctype.h>
 
-void error(const char *msg)
+#define WIN32_LEAN_AND_MEAN
+
+// Exibir uma mensagem de erro e sair
+void mensagemDeErro(const char *msg)
 {
     perror(msg);
     exit(1);
 }
 
+// gerar a palavra oculta
 void generateHiddenWord(const char *word, const int *revealed, char *hiddenWord)
 {
     size_t length = strlen(word);
@@ -22,7 +33,8 @@ void generateHiddenWord(const char *word, const int *revealed, char *hiddenWord)
     hiddenWord[length] = '\0';
 }
 
-int checkWin(const int *revealed, size_t length)
+// verificar vitória
+int checkVitoria(const int *revealed, size_t length)
 {
     for (size_t i = 0; i < length; ++i)
     {
@@ -44,24 +56,27 @@ int main(int argc, char *argv[])
     char buffer[1024];
     int n;
 
-    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8); // só para melhorar a visualização no console
 
+    // verifica se o número da porta foi fornecido
     if (argc < 2)
     {
         fprintf(stderr, "ERROR, no port provided\n");
         exit(1);
     }
 
+    // inicia o Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
     {
-        printf("Erro ao inicializar o Winsock: %d\n", WSAGetLastError());
+        printf("Erro na inicializacao do Winsock: %d\n", WSAGetLastError());
         exit(1);
     }
 
+    // cia o socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == INVALID_SOCKET)
     {
-        error("Erro ao abrir o socket");
+        mensagemDeErro("Erro ao iniciar o socket");
     }
 
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
@@ -70,39 +85,44 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
 
+    // Faz o bind do socket ao endereço configurado
     if (bind(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) == SOCKET_ERROR)
     {
-        error("Erro no binding");
+        mensagemDeErro("Erro no binding");
     }
 
+    // Configura o socket para ouvir conexões
     listen(sockfd, 5);
     clilen = sizeof(cli_addr);
 
-    const char word[] = "forca"; // Palavra fixa para o jogo
+    // ====== JOGO DA FORCA =========
+
+    const char word[] = "redes";
     size_t wordLength = strlen(word);
-    int revealed[64] = {0}; // Tamanho fixo suficiente para a palavra
+    int revealed[64] = {0};
     int attemptsLeft = 6;
     char hiddenWord[64];
 
     while (1)
     {
-        printf("Servidor esperando uma nova conexao...\n");
+        printf("Esperando nova conexao\n");
 
+        // aceita  nova conexao
         newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
         if (newsockfd == INVALID_SOCKET)
         {
-            error("Erro no accept");
+            mensagemDeErro("Erro no accept");
         }
 
-        printf("Conexao estabelecida com um cliente!\n");
+        printf("Conexao estabelecida\n");
 
-        while (attemptsLeft > 0 && !checkWin(revealed, wordLength))
+        while (attemptsLeft > 0 && !checkVitoria(revealed, wordLength))
         {
             memset(buffer, 0, sizeof(buffer));
             n = recv(newsockfd, buffer, sizeof(buffer) - 1, 0);
             if (n <= 0)
             {
-                printf("Conexao encerrada pelo cliente.\n");
+                printf("Conexao encerrada\n");
                 break;
             }
 
@@ -122,10 +142,13 @@ int main(int argc, char *argv[])
             {
                 --attemptsLeft;
             }
+
+            // Gera a palavra oculta com as letras reveladas
             generateHiddenWord(word, revealed, hiddenWord);
+
             snprintf(buffer, sizeof(buffer), "\nPalavra: %s Tentativas restantes: %d", hiddenWord, attemptsLeft);
 
-            if (checkWin(revealed, wordLength))
+            if (checkVitoria(revealed, wordLength))
             {
                 strcat(buffer, " GANHOU! ");
             }
@@ -138,20 +161,23 @@ int main(int argc, char *argv[])
                 strcat(buffer, " Digite uma letra: ");
             }
 
-            // Envia o buffer ao cliente
             n = send(newsockfd, buffer, strlen(buffer), 0);
             if (n < 0)
             {
-                error("Erro ao enviar resposta para o cliente");
+                mensagemDeErro("Erro ao enviar resposta para o cliente");
             }
         }
 
+        // Fecha a conexão
         closesocket(newsockfd);
-        printf("Conexao encerrada. Reiniciando o jogo.\n");
+        printf("Conexao encerrada\n");
+
+        // Reinicia
         memset(revealed, 0, sizeof(revealed));
         attemptsLeft = 6;
     }
 
+    // Fecha o socket principal e limpa o Winsock
     closesocket(sockfd);
     WSACleanup();
     return 0;
