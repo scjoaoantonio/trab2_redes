@@ -59,7 +59,7 @@ void *handle_client(void *arg)
 
     generateHiddenWord(word, revealed, hiddenWord);
 
-    while (attemptsLeft > 0 && !checkWin(revealed, wordLength))
+    while (attemptsLeft > 0 && !checkVitoria(revealed, wordLength))
     {
         char buffer[1024] = {0};
         snprintf(buffer, sizeof(buffer), "\nPalavra: %s Tentativas restantes: %d ", hiddenWord, attemptsLeft);
@@ -99,7 +99,7 @@ void *handle_client(void *arg)
     }
 
     // Enviar mensagem final após sair do loop principal
-    if (checkWin(revealed, wordLength))
+    if (checkVitoria(revealed, wordLength))
     {
         send(newsockfd, "\nGANHOU!\n", 9, 0);
     }
