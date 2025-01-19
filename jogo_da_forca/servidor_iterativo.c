@@ -1,11 +1,3 @@
-/*
-servidor_iterativo
-
- gcc -o servidor_iterativo servidor_iterativo.c -lws2_32
-./servidor_iterativo 8080
-
-*/
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -72,7 +64,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    // cia o socket
+    // cria o socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == INVALID_SOCKET)
     {
@@ -97,17 +89,11 @@ int main(int argc, char *argv[])
 
     // ====== JOGO DA FORCA =========
 
-    const char word[] = "redes";
-    size_t wordLength = strlen(word);
-    int revealed[64] = {0};
-    int attemptsLeft = 6;
-    char hiddenWord[64];
-
     while (1)
     {
         printf("Esperando nova conexao\n");
 
-        // aceita  nova conexao
+        // aceita nova conexao
         newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
         if (newsockfd == INVALID_SOCKET)
         {
@@ -116,8 +102,28 @@ int main(int argc, char *argv[])
 
         printf("Conexao estabelecida\n");
 
+        // Inicializa o jogo para o novo cliente
+        const char word[] = "redes";
+        size_t wordLength = strlen(word);
+        int revealed[64] = {0};
+        int attemptsLeft = 6;
+        char hiddenWord[64];
+
         while (attemptsLeft > 0 && !checkVitoria(revealed, wordLength))
         {
+            // Gera a palavra oculta com as letras reveladas
+            generateHiddenWord(word, revealed, hiddenWord);
+
+            snprintf(buffer, sizeof(buffer), "\nPalavra: %s Tentativas restantes: %d", hiddenWord, attemptsLeft);
+            strcat(buffer, " Digite uma letra: ");
+
+            // Envia a mensagem para o cliente
+            n = send(newsockfd, buffer, strlen(buffer), 0);
+            if (n < 0)
+            {
+                mensagemDeErro("Erro ao enviar mensagem para o cliente");
+            }
+
             memset(buffer, 0, sizeof(buffer));
             n = recv(newsockfd, buffer, sizeof(buffer) - 1, 0);
             if (n <= 0)
@@ -129,6 +135,7 @@ int main(int argc, char *argv[])
             char guess = tolower(buffer[0]);
             int found = 0;
 
+            // Verifica se a letra adivinhada está na palavra
             for (size_t i = 0; i < wordLength; ++i)
             {
                 if (word[i] == guess)
@@ -142,39 +149,21 @@ int main(int argc, char *argv[])
             {
                 --attemptsLeft;
             }
-
-            // Gera a palavra oculta com as letras reveladas
-            generateHiddenWord(word, revealed, hiddenWord);
-
-            snprintf(buffer, sizeof(buffer), "\nPalavra: %s Tentativas restantes: %d", hiddenWord, attemptsLeft);
-
-            if (checkVitoria(revealed, wordLength))
-            {
-                strcat(buffer, " GANHOU! ");
-            }
-            else if (attemptsLeft == 0)
-            {
-                snprintf(buffer + strlen(buffer), sizeof(buffer) - strlen(buffer), " PERDEU! Resposta: %s", word);
-            }
-            else
-            {
-                strcat(buffer, " Digite uma letra: ");
-            }
-
-            n = send(newsockfd, buffer, strlen(buffer), 0);
-            if (n < 0)
-            {
-                mensagemDeErro("Erro ao enviar resposta para o cliente");
-            }
         }
 
-        // Fecha a conexão
+        // Envia resultado final ao cliente
+        if (checkVitoria(revealed, wordLength))
+        {
+            snprintf(buffer, sizeof(buffer), "GANHOU! A palavra era: %s\n", word);
+        }
+        else
+        {
+            snprintf(buffer, sizeof(buffer), "PERDEU! A palavra era: %s\n", word);
+        }
+
+        send(newsockfd, buffer, strlen(buffer), 0);
         closesocket(newsockfd);
         printf("Conexao encerrada\n");
-
-        // Reinicia
-        memset(revealed, 0, sizeof(revealed));
-        attemptsLeft = 6;
     }
 
     // Fecha o socket principal e limpa o Winsock

@@ -1,5 +1,3 @@
-// # servidor_thread
-
 // gcc -o servidor_thread servidor_thread.c -lws2_32 -lpthread
 // ./servidor_thread 8080
 
@@ -13,14 +11,12 @@
 
 volatile int running = 1;
 
-// Exibir uma mensagem de erro e sair
 void mensagemDeErro(const char *msg)
 {
     fprintf(stderr, "%s: %d\n", msg, WSAGetLastError());
     exit(1);
 }
 
-// Gerar a palavra oculta
 void generateHiddenWord(const char *word, const int *revealed, char *hiddenWord)
 {
     size_t length = strlen(word);
@@ -31,7 +27,6 @@ void generateHiddenWord(const char *word, const int *revealed, char *hiddenWord)
     hiddenWord[length] = '\0';
 }
 
-// Checar vitória do usuário
 int checkVitoria(const int *revealed, size_t length)
 {
     for (size_t i = 0; i < length; ++i)
@@ -44,7 +39,6 @@ int checkVitoria(const int *revealed, size_t length)
     return 1;
 }
 
-// ======= JOGO DA FORCA ========
 void *handle_client(void *arg)
 {
     int newsockfd = *(int *)arg;
@@ -61,7 +55,7 @@ void *handle_client(void *arg)
     while (attemptsLeft > 0 && !checkVitoria(revealed, wordLength))
     {
         char buffer[1024] = {0};
-        snprintf(buffer, sizeof(buffer), "\nPalavra: %s Tentativas restantes: %d Digite uma letra: ", hiddenWord, attemptsLeft);
+        snprintf(buffer, sizeof(buffer), "Palavra: %s\nTentativas restantes: %d\nDigite uma letra:\n", hiddenWord, attemptsLeft);
         send(newsockfd, buffer, strlen(buffer), 0);
 
         memset(buffer, 0, sizeof(buffer));
@@ -75,7 +69,6 @@ void *handle_client(void *arg)
         char guess = tolower(buffer[0]);
         int found = 0;
 
-        // olha se a letra está na palavra
         for (size_t i = 0; i < wordLength; ++i)
         {
             if (word[i] == guess)
@@ -88,11 +81,11 @@ void *handle_client(void *arg)
         if (!found)
         {
             --attemptsLeft;
-            send(newsockfd, " Errado! ", 9, 0);
+            send(newsockfd, "Errado!\n", 8, 0);
         }
         else
         {
-            send(newsockfd, " Certo! ", 8, 0);
+            send(newsockfd, "Certo!\n", 7, 0);
         }
 
         generateHiddenWord(word, revealed, hiddenWord);
@@ -100,12 +93,12 @@ void *handle_client(void *arg)
 
     if (checkVitoria(revealed, wordLength))
     {
-        send(newsockfd, "\nGANHOU!\n", strlen("\nGANHOU!\n"), 0);
+        send(newsockfd, "GANHOU!\n", 8, 0);
     }
     else
     {
         char buffer[1024];
-        snprintf(buffer, sizeof(buffer), "\nPERDEU! Resposta: %s\n", word);
+        snprintf(buffer, sizeof(buffer), "PERDEU! Resposta: %s\n", word);
         send(newsockfd, buffer, strlen(buffer), 0);
     }
 
@@ -115,7 +108,6 @@ void *handle_client(void *arg)
 
 int main(int argc, char *argv[])
 {
-    // Inicializar Winsock
     WSADATA wsaData;
     int sockfd, newsockfd, portno;
     struct sockaddr_in serv_addr, cli_addr;
